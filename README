@@ -43,5 +43,5 @@ To test included examples:
 APIs
 ===============
 
-Please read header files include/dataspaces.h and include/dimes_interface.h for
+Please read header files include/messaging-server.h and include/messaging-client.h for
 detailed API documentation. 
