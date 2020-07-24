@@ -1,0 +1,11 @@
+prefix=@DEST_DIR@
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: messaging 
+Description: Messaging layer based on pub/sub
+Version: @MESSAGING_VERSION@
+
+Libs: -L${libdir} @PRIVATE_LIBS@
+Cflags: -I${includedir}

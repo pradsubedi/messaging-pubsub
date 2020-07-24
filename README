@@ -1,0 +1,47 @@
+
+This package contains the source code and two test applications for
+a publish/subscribe based eventing run-time library, which is a flexible 
+interaction and coordination framework to support coupled applications.
+The coupled applications can coordinate and interact using this library by
+publishing/subscribing messages to/from certain namespaces and filter.
+When a subscriber gets notification of a published msg, corresponding handler
+functions are triggered.
+
+This library uses margo (mochi+argobots) for the underlying communication between
+publishers and subscribers.
+
+Building and Installing
+==================================
+
+Requires Margo to be installed.
+
+If you do not have spack installed:
+  $ git clone https://github.com/spack/spack
+  $ . share/spack/setup-env.sh
+If you do not have margo installed
+  $ git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git
+  $ spack repo add sds-repo
+  $ spack install mochi-margo
+
+Load the margo-library
+  $ spack load -r margo
+
+Build:
+  $ cd pubsub
+  $ mkdir build
+  $ cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DENABLE_TESTS=ON 
+    -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=mpicc 
+    -DCMAKE_CXX_COMPILER=mpicxx ..
+  $ make && make install
+
+To test included examples:
+  $ cd tests
+  $ mpirun -n 2 ./server
+  In new terminal window:
+  $ mpirun -n 2 ./client
+
+APIs
+===============
+
+Please read header files include/dataspaces.h and include/dimes_interface.h for
+detailed API documentation. 
