@@ -27,7 +27,7 @@ Load the margo-library
   $ spack load -r margo
 
 Build:
-  $ cd pubsub
+  $ cd messaging-pubsub-master
   $ mkdir build
   $ cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DENABLE_TESTS=ON 
     -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=mpicc 
