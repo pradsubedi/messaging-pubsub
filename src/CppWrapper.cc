@@ -59,6 +59,11 @@ extern "C" {
 		return t->get_value(names, filter);
 	}
 
+	vector map_get_filters(const WrapperMap *test){
+		MapWrap *t = (MapWrap*)test;
+		return t->get_filters();
+	}
+
 	void map_delete(WrapperMap *test) {
 		MapWrap *t = (MapWrap *)test;
 		t->delete_all();

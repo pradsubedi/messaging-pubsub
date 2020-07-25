@@ -102,7 +102,7 @@ static int write_address(messaging_server_t server){
         ret = -1;
         goto errorfree;
     }
-    fprintf(stderr,"Server %s is rank %d\n", my_addr_str, rank);
+    fprintf(stdout,"Server running at %s\n", my_addr_str);
 
     sizes = malloc(comm_size * sizeof(*sizes));
     self_addr_str_size = (int)strlen(my_addr_str) + 1;

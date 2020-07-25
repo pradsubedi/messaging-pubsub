@@ -83,6 +83,39 @@ vector MapWrap::get_value(const char *names, const char *filter){
 
 }
 
+vector MapWrap::get_filters(){
+
+	VECTOR_INIT(v);
+	std::map <std::string, std::map<std::string, vector>>::iterator it_out = cMap.begin();
+	while (it_out != cMap.end()){
+		int i = 0;
+		char *out_str = new char[(it_out->first).length()+1];
+		strcpy(out_str, (it_out->first).c_str());
+		VECTOR_ADD(v, out_str);
+
+		std::map<std::string, vector> inner_map = it_out->second;
+		std::map<std::string, vector>::iterator it_in = inner_map.begin();
+		while(it_in != inner_map.end()){
+			if((i%2) != 0){
+				VECTOR_ADD(v, out_str);
+				i = 0;
+			}
+			char *in_str = new char[(it_in->first).length()+1];
+			strcpy(in_str, (it_in->first).c_str());
+			VECTOR_ADD(v, in_str);
+			i++;
+			it_in++;
+
+		}
+		if(i==0)
+			VECTOR_DELETE(v, VECTOR_TOTAL(v)-1);
+		
+		it_out++;
+	}
+	return v;
+
+}
+
 void MapWrap::mp_delete(const char *names, const char *filter, const char *subscriber_addr){
 
 	std::string c_names(names);

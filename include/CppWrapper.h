@@ -39,6 +39,7 @@ extern "C" {
 	WrapperMap * map_new();
 	void map_subscribe( const WrapperMap *t, const char *names, const char *filter, const char *subscriber_addr);
 	vector map_get_value(const WrapperMap *t, const char *names, const char *filter);
+	vector map_get_filters(const WrapperMap *t);
 	void map_unsubscribe(const WrapperMap *t, const char *names, const char *filter, const char *subscriber_addr);
 	void map_remove(const WrapperMap *t, const char *subscriber_addr);
 	void map_delete(WrapperMap *t);

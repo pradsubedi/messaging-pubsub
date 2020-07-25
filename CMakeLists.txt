@@ -23,6 +23,9 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+# Check if the compiler is mpicc and mpicxx
+add_definitions(-DHAVE_MPI)
+
 set (CMAKE_PREFIX_PATH "" CACHE STRING "External dependencies path")
 set (BUILD_SHARED_LIBS "OFF" CACHE BOOL "Build a shared library")
 

@@ -61,7 +61,7 @@ DECLARE_MARGO_RPC_HANDLER(notify_rpc);
 
 static void notify_rpc(hg_handle_t h);
 static int remove_all_subscriptions(messaging_client_t client);
-
+static int remove_all_subscriptions_new(messaging_client_t client);
 
 unsigned long hash(char *str)
     {
@@ -248,7 +248,8 @@ finish:
 
 int client_finalize(messaging_client_t client){
 
-    remove_all_subscriptions(client);
+    //remove_all_subscriptions(client);
+    remove_all_subscriptions_new(client);
     margo_deregister(client->mid, client->notify_id);
     map_delete(client->t);
     free(client->addr_string);
@@ -445,6 +446,85 @@ static int remove_all_subscriptions(messaging_client_t client){
     free(hndl);
     free(serv_req);
     return ret;
+
+}
+
+static int remove_all_subscriptions_new(messaging_client_t client){
+    int ret;
+    char *my_addr_str;
+    bulk_data_t in;
+
+    in.evnt.size = client->addr_string_len;
+    in.evnt.raw_data = client->addr_string;
+
+    margo_request *serv_req;
+    hg_handle_t *hndl;
+    vector v;
+    int *arr;
+    v = map_get_filters(client->t);
+    int serv_size = VECTOR_TOTAL(v)/2;
+    arr = (int*)malloc(sizeof(int)*serv_size);
+    //get server ids in an array
+    for (int i = 0; i < VECTOR_TOTAL(v); ++i)
+    {
+        int j = 0;
+        if((i%2)==0)
+            continue;
+        arr[j] = hash(VECTOR_GET(v, char*, i)) % client->num_servers;
+        j++;
+        free(VECTOR_GET(v, char*, i));
+    }
+    //remove duplicte server ids
+    for (int i = 0; i < serv_size; i++)
+    {
+        for(int j = i + 1; j < serv_size; j++)
+        {
+            if(arr[i] == arr[j])
+            {
+                for(int k = j; k < serv_size; k++)
+                {
+                    arr[k] = arr[k + 1];
+                }
+                serv_size--;
+                j--;
+            }
+        }
+    }
+
+    hndl = (hg_handle_t*)malloc(sizeof(hg_handle_t)*serv_size);
+    serv_req = (margo_request*)malloc(sizeof(margo_request)*serv_size);
+    
+    for (int i = 0; i < serv_size; ++i)
+    {
+        hg_addr_t svr_addr;
+        margo_request req;
+        hg_handle_t h;
+        int serv_id = arr[i];
+        margo_addr_lookup(client->mid, client->server_address[serv_id], &svr_addr);
+        margo_create(client->mid, svr_addr, client->finalize_id, &h);
+        margo_iforward(h, &in, &req);
+        hndl[i] = h;
+        serv_req[i] = req;
+    }
+    for (int i = 0; i < serv_size; ++i){
+        margo_wait(serv_req[i]);
+        response_t resp;
+        margo_get_output(hndl[i], &resp);
+        ret = resp.ret;
+        margo_free_output(hndl[i], &resp);
+        margo_destroy(hndl[i]);
+        int serv_id = arr[i];
+        if(ret!=MESSAGING_SUCCESS){
+            fprintf(stderr, "Could not unregister client %s from server %s\n", client->addr_string, client->server_address[serv_id]);
+            return ret;
+        }
+        
+    }
+    free(hndl);
+    free(serv_req);
+    free(arr);
+    return ret;
+
 }
 
 

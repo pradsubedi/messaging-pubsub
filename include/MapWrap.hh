@@ -38,6 +38,7 @@ class MapWrap {
         public:
                 void mp_insert(const char *names, const char *filter, const char *subscriber_addr);
                 vector get_value(const char *names, const char *filter);
+                vector get_filters();
                 void mp_delete(const char *names, const char *filter, const char *subscriber_addr);
                 void mp_remove(const char *subscriber_addr);
                 MapWrap();
