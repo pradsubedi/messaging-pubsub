@@ -60,6 +60,7 @@ int main(int argc, char **argv){
 
     // make margo wait for finalize
     margo_wait_for_finalize(mid);
+    server_destroy(s);
     
     MPI_Finalize();
     return 0;

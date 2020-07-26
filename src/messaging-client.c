@@ -450,7 +450,7 @@ int publish(messaging_client_t client, char *namesp, char* filter, void* messg, 
 
 }
 
-int subscribe(messaging_client_t client, char *namesp, char* filter, void *handler_func, void *handler_args){
+int subscribe(messaging_client_t client, char *namesp, char* filter, void (*handler_func)(void *, void*), void *handler_args){
 
     int ret=0;
     int server_id= hash(filter) % client->num_servers;

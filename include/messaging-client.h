@@ -117,7 +117,7 @@ int publish(messaging_client_t client,
 int subscribe(messaging_client_t client, 
         char *namesp, 
         char *filter,
-        void *callback,
+        void (*callback)(void*, void*),
         void *callback_args);
 
 /**
