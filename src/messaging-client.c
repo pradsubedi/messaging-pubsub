@@ -51,7 +51,7 @@ struct messaging_client {
     hg_id_t finalize_id;
     char **server_address;
     int num_servers;
-    MPI_Comm comm;
+    //MPI_Comm comm;
     char *addr_string;
     int addr_string_len;
     WrapperMap *t;
@@ -91,7 +91,7 @@ char ** addr_str_buf_to_list(
 }
 
 
-static int build_address(messaging_client_t* cl){
+static int build_address_with_mpi(messaging_client_t* cl, MPI_Comm comm){
     /* open config file for reading */
     int ret;
     struct stat st;
@@ -105,8 +105,8 @@ static int build_address(messaging_client_t* cl){
     messaging_client_t client;
     client = *cl;
     int comm_size, rank;
-    MPI_Comm_size(client->comm, &comm_size);
-    MPI_Comm_rank(client->comm, &rank);
+    MPI_Comm_size(comm, &comm_size);
+    MPI_Comm_rank(comm, &rank);
 
     char* file_name = "servids.0";
     if(rank==0){
@@ -168,13 +168,13 @@ static int build_address(messaging_client_t* cl){
         free(rd_buf);
     }
 
-    MPI_Barrier(client->comm);
+    MPI_Barrier(comm);
     // Broadcasting buffer_len and buffer to all client ranks
-    MPI_Bcast(&addr_str_buf_len, 1, MPI_INT, 0, client->comm);
-    MPI_Bcast(&num_addrs, 1, MPI_INT, 0, client->comm);
+    MPI_Bcast(&addr_str_buf_len, 1, MPI_INT, 0, comm);
+    MPI_Bcast(&num_addrs, 1, MPI_INT, 0, comm);
     if(rank!=0)
         addr_str_buf = malloc(addr_str_buf_len);
-    MPI_Bcast(addr_str_buf, addr_str_buf_len, MPI_CHAR, 0, client->comm);
+    MPI_Bcast(addr_str_buf, addr_str_buf_len, MPI_CHAR, 0, comm);
     
     /* set up address string array for group members */
     client->server_address = (char **)addr_str_buf_to_list(addr_str_buf, num_addrs);
@@ -186,14 +186,154 @@ fini:
     return ret;
 }
 
-int client_init(margo_instance_id mid, MPI_Comm comm, messaging_client_t* cl)
+static int build_address(messaging_client_t* cl){
+    /* open config file for reading */
+    int ret;
+    struct stat st;
+    char *rd_buf = NULL;
+    ssize_t rd_buf_size;
+    char *tok;
+    void *addr_str_buf = NULL;
+    int addr_str_buf_len = 0, num_addrs = 0;
+    int fd;
+
+    messaging_client_t client;
+    client = *cl;
+
+    char* file_name = "servids.0";
+    fd = open(file_name, O_RDONLY);
+    if (fd == -1)
+    {
+        fprintf(stderr, "Error: Unable to open config file %s for server_address list\n",
+            file_name);
+        goto fini;
+    }
+
+    /* get file size and allocate a buffer to store it */
+    ret = fstat(fd, &st);
+    if (ret == -1)
+    {
+        fprintf(stderr, "Error: Unable to stat config file %s for server_address list\n",
+            file_name);
+        goto fini;
+    }
+    ret = -1;
+    rd_buf = malloc(st.st_size);
+    if (rd_buf == NULL) goto fini;
+
+    /* load it all in one fell swoop */
+    rd_buf_size = read(fd, rd_buf, st.st_size);
+    if (rd_buf_size != st.st_size)
+    {
+        fprintf(stderr, "Error: Unable to stat config file %s for server_address list\n",
+            file_name);
+        goto fini;
+    }
+    rd_buf[rd_buf_size]='\0';
+
+    // strtok the result - each space-delimited address is assumed to be
+    // a unique mercury address
+
+    tok = strtok(rd_buf, "\r\n\t ");
+    if (tok == NULL) goto fini;
+
+    // build up the address buffer
+    addr_str_buf = malloc(rd_buf_size);
+    if (addr_str_buf == NULL) goto fini;
+    do
+    {
+        int tok_size = strlen(tok);
+        memcpy((char*)addr_str_buf + addr_str_buf_len, tok, tok_size+1);
+        addr_str_buf_len += tok_size+1;
+        num_addrs++;
+        tok = strtok(NULL, "\r\n\t ");
+    } while (tok != NULL);
+    if (addr_str_buf_len != rd_buf_size)
+    {
+        // adjust buffer size if our initial guess was wrong
+        fprintf(stderr, "Read size and buffer_len are not equal\n");
+        void *tmp = realloc(addr_str_buf, addr_str_buf_len);
+        if (tmp == NULL) goto fini;
+        addr_str_buf = tmp;
+    }
+    free(rd_buf);
+   
+    /* set up address string array for group members */
+    client->server_address = (char **)addr_str_buf_to_list(addr_str_buf, num_addrs);
+    client->num_servers = num_addrs;
+    *cl = client;
+    ret = 0;
+
+fini:
+    return ret;
+}
+
+int client_init_with_mpi(margo_instance_id mid, MPI_Comm comm, messaging_client_t* cl)
 {
     
     messaging_client_t client  = (messaging_client_t)calloc(1, sizeof(*client));
     if(!client) return MESSAGING_ERR_ALLOCATION;
 
     int ret = 0;
-    client->comm = comm;
+
+    hg_return_t hret          = HG_SUCCESS;
+    client->mid = mid;
+
+    ret = build_address_with_mpi(&client, comm);
+    if(ret!=0)
+        goto finish;
+
+    hg_bool_t flag;
+    hg_id_t id;
+    margo_registered_name(mid, "publish_rpc", &id, &flag);
+
+    if(flag == HG_TRUE) { /* RPCs already registered */
+        margo_registered_name(mid, "publish_rpc",                   &client->pub_id,                   &flag);
+        margo_registered_name(mid, "subscribe_rpc",                   &client->sub_id,                   &flag);
+        margo_registered_name(mid, "unsubscribe_rpc",                   &client->unsub_id,                   &flag);
+        margo_registered_name(mid, "client_finalize_rpc",                   &client->finalize_id,                   &flag);
+        margo_registered_name(mid, "notify_rpc",                   &client->notify_id,                   &flag);
+   
+    } else {
+
+        client->pub_id =
+            MARGO_REGISTER(mid, "publish_rpc", bulk_data_t, response_t, NULL);
+        client->sub_id =
+            MARGO_REGISTER(mid, "subscribe_rpc", bulk_data_t, response_t, NULL);
+        client->unsub_id =
+            MARGO_REGISTER(mid, "unsubscribe_rpc", bulk_data_t, response_t, NULL);
+        client->finalize_id =
+            MARGO_REGISTER(mid, "client_finalize_rpc", bulk_data_t, response_t, NULL);
+        client->notify_id =
+            MARGO_REGISTER(mid, "notify_rpc", bulk_data_t, response_t, notify_rpc);
+        margo_register_data(mid, client->notify_id, (void*)client, NULL);
+    }
+    
+    hg_addr_t my_addr  = HG_ADDR_NULL;
+    hg_size_t my_addr_size;
+    char *my_addr_str = NULL;
+    margo_addr_self(client->mid, &my_addr);
+    margo_addr_to_string(client->mid, NULL, &my_addr_size, my_addr);
+    my_addr_str = malloc(my_addr_size);
+    margo_addr_to_string(client->mid, my_addr_str, &my_addr_size, my_addr);
+    client->addr_string = my_addr_str;
+    client->addr_string_len = my_addr_size;
+    client->t = map_new();
+
+    *cl = client;
+
+    return MESSAGING_SUCCESS;
+finish:
+    return ret;
+}
+
+int client_init(margo_instance_id mid, messaging_client_t* cl)
+{
+    
+    messaging_client_t client  = (messaging_client_t)calloc(1, sizeof(*client));
+    if(!client) return MESSAGING_ERR_ALLOCATION;
+
+    int ret = 0;
 
     hg_return_t hret          = HG_SUCCESS;
     client->mid = mid;
@@ -255,7 +395,6 @@ int client_finalize(messaging_client_t client){
     free(client->addr_string);
     free(client->server_address[0]);
     free(client->server_address);
-    client->comm = NULL;
     //margo_finalize(client->mid);
     free(client);
     return MESSAGING_SUCCESS;
@@ -472,7 +611,7 @@ static int remove_all_subscriptions_new(messaging_client_t client){
             continue;
         arr[j] = hash(VECTOR_GET(v, char*, i)) % client->num_servers;
         j++;
-        free(VECTOR_GET(v, char*, i));
+        free(VECTOR_GET(v, char*, i)); 
     }
     //remove duplicte server ids
     for (int i = 0; i < serv_size; i++)

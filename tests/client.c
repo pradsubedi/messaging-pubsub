@@ -67,7 +67,9 @@ int main(int argc, char **argv){
 
     mid = margo_init(listen_addr_str, MARGO_SERVER_MODE, 1, -1);
     assert(mid);
-    int ret = client_init(mid, gcomm, &c);
+    //Use client_init() if clients do not use gcomm
+    //int ret = client_init(mid, &c);
+    /int ret = client_init_with_mpi(mid, gcomm, &c);
     if(c == MESSAGING_CLIENT_NULL){
         fprintf(stderr, "Client is NULL\n");
         return 0;

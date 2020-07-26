@@ -50,12 +50,23 @@ typedef struct messaging_client* messaging_client_t;
  * @brief Creates a MESSAGING client.
  *
  * @param[in] mid Margo instance
- * @param[in] comm MPI Comminicator
  * @param[out] client MESSAGING client
  *
  * @return MESSAGING_SUCCESS or error code defined in messaging-common.h
  */
 int client_init( margo_instance_id mid,
+        messaging_client_t* client); 
+
+/**
+ * @brief Creates a MESSAGING client.
+ *
+ * @param[in] mid Margo instance
+ * @param[in] comm MPI Comminicator
+ * @param[out] client MESSAGING client
+ *
+ * @return MESSAGING_SUCCESS or error code defined in messaging-common.h
+ */
+int client_init_with_mpi( margo_instance_id mid,
 		MPI_Comm comm, 
         messaging_client_t* client); 
 

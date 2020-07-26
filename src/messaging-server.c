@@ -51,7 +51,6 @@ struct messaging_server{
     hg_id_t notify_id;
     hg_id_t finalize_id;
     WrapperMap *t;
-    MPI_Comm comm;
 };
 
 DECLARE_MARGO_RPC_HANDLER(publish_rpc);
@@ -64,15 +63,15 @@ static void subscribe_rpc(hg_handle_t h);
 static void unsubscribe_rpc(hg_handle_t h);
 static void client_finalize_rpc(hg_handle_t h);
 
-static int write_address(messaging_server_t server){
+static int write_address(messaging_server_t server, MPI_Comm comm){
 
     hg_addr_t my_addr  = HG_ADDR_NULL;
     hg_return_t hret   = HG_SUCCESS;
     hg_size_t my_addr_size;
 
     int comm_size, rank, ret = 0;
-    MPI_Comm_size(server->comm, &comm_size);
-    MPI_Comm_rank(server->comm, &rank);
+    MPI_Comm_size(comm, &comm_size);
+    MPI_Comm_rank(comm, &rank);
 
     char *my_addr_str = NULL;
     int self_addr_str_size = 0;
@@ -106,7 +105,7 @@ static int write_address(messaging_server_t server){
 
     sizes = malloc(comm_size * sizeof(*sizes));
     self_addr_str_size = (int)strlen(my_addr_str) + 1;
-    MPI_Allgather(&self_addr_str_size, 1, MPI_INT, sizes, 1, MPI_INT, server->comm);
+    MPI_Allgather(&self_addr_str_size, 1, MPI_INT, sizes, 1, MPI_INT, comm);
 
     int addr_buf_size = 0;
     for (int i = 0; i < comm_size; ++i)
@@ -120,7 +119,7 @@ static int write_address(messaging_server_t server){
         sizes_psum[i] = sizes_psum[i-1] + sizes[i-1];
 
     addr_str_buf = malloc(addr_buf_size);
-    MPI_Gatherv(my_addr_str, self_addr_str_size, MPI_CHAR, addr_str_buf, sizes, sizes_psum, MPI_CHAR, 0, server->comm);
+    MPI_Gatherv(my_addr_str, self_addr_str_size, MPI_CHAR, addr_str_buf, sizes, sizes_psum, MPI_CHAR, 0, comm);
     if(rank==0){
         
         for (int i = 1; i < comm_size; ++i)
@@ -174,12 +173,11 @@ int server_init(margo_instance_id mid, MPI_Comm comm, messaging_server_t* sv)
     if(!server) return MESSAGING_ERR_ALLOCATION;
 
     int ret = 0;
-    server->comm = comm;
 
     hg_return_t hret  = HG_SUCCESS;
     server->mid = mid;
 
-    ret = write_address(server);
+    ret = write_address(server, comm);
     if(ret!=0)
         goto finish;
 
@@ -229,7 +227,6 @@ int server_destroy(messaging_server_t server){
     /* deregister other RPC ids ... */
     map_delete(server->t);
     server->t = NULL;
-    server->comm = NULL;
     free(server);
 }
 
