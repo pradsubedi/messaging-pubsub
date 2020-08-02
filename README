@@ -3,7 +3,7 @@ This package contains the source code and two test applications for
 a publish/subscribe based eventing run-time library, which is a flexible 
 interaction and coordination framework to support coupled applications.
 The coupled applications can coordinate and interact using this library by
-publishing/subscribing messages to/from certain namespaces and filter.
+publishing/subscribing messages to/from certain namespaces and topic.
 When a subscriber gets notification of a published msg, corresponding handler
 functions are triggered.
 

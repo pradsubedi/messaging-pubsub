@@ -401,29 +401,29 @@ int client_finalize(messaging_client_t client){
 
 }
 
-int publish(messaging_client_t client, char *namesp, char* filter, void* messg, int msg_len){
+int publish(messaging_client_t client, char *namesp, char* topic, void* messg, int msg_len){
     
-    int server_id= hash(filter) % client->num_servers;
+    int server_id= hash(topic) % client->num_servers;
     
     char* raw_buf;
     
-    int name_len, filter_len;
+    int name_len, topic_len;
     int ret = 0;
 
     name_len = strlen(namesp);
-    filter_len = strlen(filter);
+    topic_len = strlen(topic);
 
     bulk_data_t raw_msg;
-    raw_msg.evnt.size = sizeof(int)*3 + name_len + filter_len + msg_len;
+    raw_msg.evnt.size = sizeof(int)*3 + name_len + topic_len + msg_len;
     raw_buf = malloc(raw_msg.evnt.size);
 
     ((int *)raw_buf)[0] = name_len;
-    ((int *)raw_buf)[1] = filter_len;
+    ((int *)raw_buf)[1] = topic_len;
     ((int *)raw_buf)[2] = msg_len;
 
     memcpy(&raw_buf[sizeof(int)*3], namesp, name_len);
-    memcpy(&raw_buf[sizeof(int)*3+name_len], filter, filter_len);
-    memcpy(&raw_buf[sizeof(int)*3+name_len+filter_len], messg, msg_len);
+    memcpy(&raw_buf[sizeof(int)*3+name_len], topic, topic_len);
+    memcpy(&raw_buf[sizeof(int)*3+name_len+topic_len], messg, msg_len);
 
     raw_msg.evnt.raw_data = raw_buf;
 
@@ -432,9 +432,10 @@ int publish(messaging_client_t client, char *namesp, char* filter, void* messg, 
 
     hg_handle_t h;
     margo_create(client->mid, svr_addr, client->pub_id, &h);
-    margo_request req;
-    margo_iforward(h, &raw_msg, &req);
-    margo_wait(req);
+    margo_forward(h, &raw_msg);
+    //margo_request req;
+    //margo_iforward(h, &raw_msg, &req);
+    //margo_wait(req);
     response_t resp;
     margo_get_output(h, &resp);
     if(resp.ret != MESSAGING_SUCCESS)
@@ -450,29 +451,29 @@ int publish(messaging_client_t client, char *namesp, char* filter, void* messg, 
 
 }
 
-int subscribe(messaging_client_t client, char *namesp, char* filter, void (*handler_func)(void *, void*), void *handler_args){
+int subscribe(messaging_client_t client, char *namesp, char* topic, void (*handler_func)(void *, void*), void *handler_args){
 
     int ret=0;
-    int server_id= hash(filter) % client->num_servers;
+    int server_id= hash(topic) % client->num_servers;
 
-    int name_len, filter_len;
+    int name_len, topic_len;
 
     name_len = strlen(namesp);
-    filter_len = strlen(filter);
+    topic_len = strlen(topic);
 
     bulk_data_t raw_msg;
-    raw_msg.evnt.size = sizeof(int)*3 + name_len + filter_len + client->addr_string_len;
+    raw_msg.evnt.size = sizeof(int)*3 + name_len + topic_len + client->addr_string_len;
 
     char *raw_buf;
     raw_buf = malloc(raw_msg.evnt.size);
     
     ((int *)raw_buf)[0] = name_len;
-    ((int *)raw_buf)[1] = filter_len;
+    ((int *)raw_buf)[1] = topic_len;
     ((int *)raw_buf)[2] = client->addr_string_len;
 
     memcpy(&raw_buf[sizeof(int)*3], namesp, name_len);
-    memcpy(&raw_buf[sizeof(int)*3+name_len], filter, filter_len);
-    memcpy(&raw_buf[sizeof(int)*3+name_len+filter_len], client->addr_string, client->addr_string_len);
+    memcpy(&raw_buf[sizeof(int)*3+name_len], topic, topic_len);
+    memcpy(&raw_buf[sizeof(int)*3+name_len+topic_len], client->addr_string, client->addr_string_len);
     
     raw_msg.evnt.raw_data = raw_buf;
 
@@ -480,9 +481,10 @@ int subscribe(messaging_client_t client, char *namesp, char* filter, void (*hand
     margo_addr_lookup(client->mid, client->server_address[server_id], &svr_addr);
     hg_handle_t h;
     margo_create(client->mid, svr_addr, client->sub_id, &h);
-    margo_request req;
-    margo_iforward(h, &raw_msg, &req);
-    margo_wait(req);
+    margo_forward(h, &raw_msg);
+    //margo_request req;
+    //margo_iforward(h, &raw_msg, &req);
+    //margo_wait(req);
     response_t resp;
     margo_get_output(h, &resp);
 
@@ -490,7 +492,7 @@ int subscribe(messaging_client_t client, char *namesp, char* filter, void (*hand
         fprintf(stderr, "subscribe message got bad response. subscribe failed\n");
     
     ret = resp.ret;
-    insert_handler(client->t, namesp, filter, handler_func, handler_args);
+    insert_handler(client->t, namesp, topic, handler_func, handler_args);
 
     margo_free_output(h, &resp);
     margo_destroy(h);
@@ -499,28 +501,28 @@ int subscribe(messaging_client_t client, char *namesp, char* filter, void (*hand
 
 }
 
-int unsubscribe(messaging_client_t client, char *namesp, char *filter){
+int unsubscribe(messaging_client_t client, char *namesp, char *topic){
 
-    int server_id= hash(filter) % client->num_servers;
+    int server_id= hash(topic) % client->num_servers;
     int ret = 0;
 
-    int name_len, filter_len;
+    int name_len, topic_len;
     name_len = strlen(namesp);
-    filter_len = strlen(filter);
+    topic_len = strlen(topic);
 
     bulk_data_t raw_msg;
-    raw_msg.evnt.size = sizeof(int)*3 + name_len + filter_len + client->addr_string_len;
+    raw_msg.evnt.size = sizeof(int)*3 + name_len + topic_len + client->addr_string_len;
 
     char* raw_buf;
     raw_buf = malloc(raw_msg.evnt.size);
     
     ((int *)raw_buf)[0] = name_len;
-    ((int *)raw_buf)[1] = filter_len;
+    ((int *)raw_buf)[1] = topic_len;
     ((int *)raw_buf)[2] = client->addr_string_len;
 
     memcpy(&raw_buf[sizeof(int)*3], namesp, name_len);
-    memcpy(&raw_buf[sizeof(int)*3+name_len], filter, filter_len);
-    memcpy(&raw_buf[sizeof(int)*3+name_len+filter_len], client->addr_string, client->addr_string_len);
+    memcpy(&raw_buf[sizeof(int)*3+name_len], topic, topic_len);
+    memcpy(&raw_buf[sizeof(int)*3+name_len+topic_len], client->addr_string, client->addr_string_len);
 
     
     raw_msg.evnt.raw_data = raw_buf;
@@ -537,7 +539,7 @@ int unsubscribe(messaging_client_t client, char *namesp, char *filter){
         fprintf(stderr, "subscribe message got bad response. subscribe failed\n");
     
     ret = resp.ret;
-    delete_handler(client->t, namesp, filter);
+    delete_handler(client->t, namesp, topic);
     margo_free_output(h, &resp);
     margo_destroy(h);
     return ret;
@@ -600,7 +602,7 @@ static int remove_all_subscriptions_new(messaging_client_t client){
     hg_handle_t *hndl;
     vector v;
     int *arr;
-    v = map_get_filters(client->t);
+    v = map_get_topics(client->t);
     int serv_size = VECTOR_TOTAL(v)/2;
     arr = (int*)malloc(sizeof(int)*serv_size);
     //get server ids in an array
@@ -681,24 +683,24 @@ static void notify_rpc(hg_handle_t h)
     ret = margo_get_input(h, &in);
     assert(ret == HG_SUCCESS);
 
-    char *namesp, *filter, *tag_msg, *raw_buf;
-    int namespace_len, filter_len, tag_len;
+    char *namesp, *topic, *tag_msg, *raw_buf;
+    int namespace_len, topic_len, tag_len;
 
     raw_buf = (char*) in.evnt.raw_data;
     namespace_len = ((int *)raw_buf)[0];
-    filter_len = ((int *)raw_buf)[1];
+    topic_len = ((int *)raw_buf)[1];
     tag_len = ((int *)raw_buf)[2];
-    //fprintf(stderr, "Namesp length: %d, filter length: %d, tag_len %d: in notification\n", namespace_len, filter_len, tag_len);
+    //fprintf(stderr, "Namesp length: %d, topic length: %d, tag_len %d: in notification\n", namespace_len, topic_len, tag_len);
 
     namesp = (char *)malloc(namespace_len);
-    filter = (char *)malloc(filter_len);
+    topic = (char *)malloc(topic_len);
     tag_msg = malloc(tag_len);
     memcpy(namesp, &raw_buf[sizeof(int)*3], namespace_len);
-    memcpy(filter, &raw_buf[sizeof(int)*3+namespace_len], filter_len);
-    memcpy(tag_msg, &raw_buf[sizeof(int)*3+namespace_len+filter_len], tag_len);
+    memcpy(topic, &raw_buf[sizeof(int)*3+namespace_len], topic_len);
+    memcpy(tag_msg, &raw_buf[sizeof(int)*3+namespace_len+topic_len], tag_len);
 
     vector v;
-    v = map_get_value(client->t, namesp, filter);
+    v = map_get_value(client->t, namesp, topic);
 
     void *handler_args;
     void (*handler_func)(void *, void *);

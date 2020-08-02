@@ -39,17 +39,17 @@ MapWrap::MapWrap(){
 	this->cMap = mymap;
 }
 
-void MapWrap::mp_insert(const char *names, const char *filter, const char *subscriber_addr){
+void MapWrap::mp_insert(const char *names, const char *topic, const char *subscriber_addr){
 
 	std::string c_names(names);
-	std::string c_filter(filter);
+	std::string c_topic(topic);
 	std::map<std::string, vector> inner_map = cMap[c_names];
 	std::map<std::string, vector>::iterator it;
-	it=inner_map.find(c_filter);
+	it=inner_map.find(c_topic);
 	if(it==inner_map.end()){
 		VECTOR_INIT(v);
 		VECTOR_ADD(v, subscriber_addr);
-		inner_map[c_filter] = v;
+		inner_map[c_topic] = v;
 	}else{
 		//
 		vector v;
@@ -63,7 +63,7 @@ void MapWrap::mp_insert(const char *names, const char *filter, const char *subsc
 			}
 		}
 		if(flg==0){
-			VECTOR_ADD(inner_map[c_filter], subscriber_addr);
+			VECTOR_ADD(inner_map[c_topic], subscriber_addr);
 		}
 	}
 	cMap[c_names] = inner_map;
@@ -71,19 +71,19 @@ void MapWrap::mp_insert(const char *names, const char *filter, const char *subsc
 }
 
 
-vector MapWrap::get_value(const char *names, const char *filter){
+vector MapWrap::get_value(const char *names, const char *topic){
 
 	std::string c_names(names);
-	std::string c_filter(filter);
+	std::string c_topic(topic);
 	
 	std::map<std::string, vector> inner_map = cMap[c_names];
 	VECTOR_INIT(v);
-	v = inner_map[c_filter];
+	v = inner_map[c_topic];
 	return v;
 
 }
 
-vector MapWrap::get_filters(){
+vector MapWrap::get_topics(){
 
 	VECTOR_INIT(v);
 	std::map <std::string, std::map<std::string, vector>>::iterator it_out = cMap.begin();
@@ -116,15 +116,15 @@ vector MapWrap::get_filters(){
 
 }
 
-void MapWrap::mp_delete(const char *names, const char *filter, const char *subscriber_addr){
+void MapWrap::mp_delete(const char *names, const char *topic, const char *subscriber_addr){
 
 	std::string c_names(names);
-	std::string c_filter(filter);
+	std::string c_topic(topic);
 
 	
 	std::map<std::string, vector> inner_map = cMap[c_names];
 	std::map<std::string, vector>::iterator it;
-	it=inner_map.find(c_filter);
+	it=inner_map.find(c_topic);
 	vector v;
 	if(it!=inner_map.end()){
 		v = it->second;
@@ -137,7 +137,7 @@ void MapWrap::mp_delete(const char *names, const char *filter, const char *subsc
 			}
 		}
 		VECTOR_DELETE(v, del_id);
-		inner_map[c_filter] = v;
+		inner_map[c_topic] = v;
 		cMap[c_names] = inner_map;
 	}
 
@@ -184,25 +184,25 @@ void MapWrap::delete_all(){
 }
 
 
-void MapWrap::insert_pointers(const char *names, const char *filter, void *func_ptr, void *func_args){
+void MapWrap::insert_pointers(const char *names, const char *topic, void *func_ptr, void *func_args){
 
 	std::string c_names(names);
-	std::string c_filter(filter);
+	std::string c_topic(topic);
 	std::map<std::string, vector> inner_map = cMap[c_names];
 	VECTOR_INIT(v);
 	VECTOR_ADD(v, func_ptr);
 	VECTOR_ADD(v, func_args);
-	inner_map[c_filter] = v;
+	inner_map[c_topic] = v;
 	cMap[c_names] = inner_map;
 	
 }
 
-void MapWrap::delete_filter(const char *names, const char *filter){
+void MapWrap::delete_topic(const char *names, const char *topic){
 	std::string c_names(names);
-	std::string c_filter(filter);
+	std::string c_topic(topic);
 
 	std::map<std::string, vector> inner_map = cMap[c_names];
-	inner_map.erase(c_filter);
+	inner_map.erase(c_topic);
 	cMap[c_names] = inner_map;
 	
 }

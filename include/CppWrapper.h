@@ -37,14 +37,14 @@ typedef void WrapperMap;
 extern "C" {
 #endif
 	WrapperMap * map_new();
-	void map_subscribe( const WrapperMap *t, const char *names, const char *filter, const char *subscriber_addr);
-	vector map_get_value(const WrapperMap *t, const char *names, const char *filter);
-	vector map_get_filters(const WrapperMap *t);
-	void map_unsubscribe(const WrapperMap *t, const char *names, const char *filter, const char *subscriber_addr);
+	void map_subscribe( const WrapperMap *t, const char *names, const char *topic, const char *subscriber_addr);
+	vector map_get_value(const WrapperMap *t, const char *names, const char *topic);
+	vector map_get_topics(const WrapperMap *t);
+	void map_unsubscribe(const WrapperMap *t, const char *names, const char *topic, const char *subscriber_addr);
 	void map_remove(const WrapperMap *t, const char *subscriber_addr);
 	void map_delete(WrapperMap *t);
-	void insert_handler(WrapperMap *test, const char *names, const char *filter, void *func_ptr,  void *func_args);
-	void delete_handler(WrapperMap *test, const char *names, const char *filter);
+	void insert_handler(WrapperMap *test, const char *names, const char *topic, void *func_ptr,  void *func_args);
+	void delete_handler(WrapperMap *test, const char *names, const char *topic);
 
 #ifdef __cplusplus
 }

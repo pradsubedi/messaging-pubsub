@@ -39,14 +39,14 @@ extern "C" {
 		return (WrapperMap *)t;
 	}
 
-	void map_subscribe(const WrapperMap *test, const char *names, const char *filter, const char *subscriber_addr) {
+	void map_subscribe(const WrapperMap *test, const char *names, const char *topic, const char *subscriber_addr) {
 		MapWrap *t = (MapWrap*)test;
-		t->mp_insert(names, filter, subscriber_addr);
+		t->mp_insert(names, topic, subscriber_addr);
 	}
 
-	void map_unsubscribe(const WrapperMap *test, const char *names, const char *filter, const char *subscriber_addr) {
+	void map_unsubscribe(const WrapperMap *test, const char *names, const char *topic, const char *subscriber_addr) {
 		MapWrap *t = (MapWrap*)test;
-		t->mp_delete(names, filter, subscriber_addr);
+		t->mp_delete(names, topic, subscriber_addr);
 	}
 
 	void map_remove(const WrapperMap *test, const char *subscriber_addr) {
@@ -54,14 +54,14 @@ extern "C" {
 		t->mp_remove(subscriber_addr);
 	}
 
-	vector map_get_value(const WrapperMap *test, const char *names, const char *filter){
+	vector map_get_value(const WrapperMap *test, const char *names, const char *topic){
 		MapWrap *t = (MapWrap*)test;
-		return t->get_value(names, filter);
+		return t->get_value(names, topic);
 	}
 
-	vector map_get_filters(const WrapperMap *test){
+	vector map_get_topics(const WrapperMap *test){
 		MapWrap *t = (MapWrap*)test;
-		return t->get_filters();
+		return t->get_topics();
 	}
 
 	void map_delete(WrapperMap *test) {
@@ -70,13 +70,13 @@ extern "C" {
 		delete t;
 	}
 
-	void insert_handler(WrapperMap *test, const char *names, const char *filter, void *func_ptr, void *func_args){
+	void insert_handler(WrapperMap *test, const char *names, const char *topic, void *func_ptr, void *func_args){
 		MapWrap *t = (MapWrap*)test;
-		t->insert_pointers(names, filter, func_ptr, func_args);
+		t->insert_pointers(names, topic, func_ptr, func_args);
 	}
-    void delete_handler(WrapperMap *test, const char *names, const char *filter){
+    void delete_handler(WrapperMap *test, const char *names, const char *topic){
     	MapWrap *t = (MapWrap*)test;
-    	t->delete_filter(names, filter);
+    	t->delete_topic(names, topic);
     }
 
 }

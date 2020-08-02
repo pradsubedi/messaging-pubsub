@@ -204,7 +204,7 @@ int server_init(margo_instance_id mid, MPI_Comm comm, messaging_server_t* sv)
             MARGO_REGISTER(mid, "unsubscribe_rpc", bulk_data_t, response_t, unsubscribe_rpc);
         margo_register_data(mid, server->unsub_id, (void*)server, NULL);
         server->notify_id =
-            MARGO_REGISTER(mid, "notify_rpc", bulk_data_t, void, NULL);
+            MARGO_REGISTER(mid, "notify_rpc", bulk_data_t, response_t, NULL);
         server->finalize_id =
             MARGO_REGISTER(mid, "client_finalize_rpc", bulk_data_t, response_t, client_finalize_rpc);
         margo_register_data(mid, server->finalize_id, (void*)server, NULL);
@@ -247,24 +247,24 @@ static void publish_rpc(hg_handle_t hndl)
 
     int i;
 
-    int namespace_len, filter_len, tag_len;
-    char *namesp, *filter,  *tag_msg, *raw_buf;
+    int namespace_len, topic_len, tag_len;
+    char *namesp, *topic,  *tag_msg, *raw_buf;
         
     raw_buf = (char*) malloc(in.evnt.size);
     memcpy(raw_buf, in.evnt.raw_data, in.evnt.size);
     
     namespace_len = ((int *)raw_buf)[0];
-    filter_len = ((int *)raw_buf)[1];
+    topic_len = ((int *)raw_buf)[1];
   
     namesp = (char *)malloc(namespace_len);
-    filter = (char *)malloc(filter_len);
+    topic = (char *)malloc(topic_len);
     memcpy(namesp, &raw_buf[sizeof(int)*3], namespace_len);
-    memcpy(filter, &raw_buf[sizeof(int)*3+namespace_len], filter_len);
+    memcpy(topic, &raw_buf[sizeof(int)*3+namespace_len], topic_len);
 
     vector sub_list;
-    sub_list = map_get_value(server->t,  namesp, filter);
+    sub_list = map_get_value(server->t,  namesp, topic);
     free(namesp);
-    free(filter);
+    free(topic);
 
     out.ret = MESSAGING_SUCCESS;
     ret = margo_respond(hndl, &out);
@@ -336,31 +336,31 @@ static void subscribe_rpc(hg_handle_t hndl)
     ret = margo_get_input(hndl, &in);
     assert(ret == HG_SUCCESS);
 
-    char *namesp, *filter, *subs_addr, *raw_buf;
-    int namespace_len, filter_len, subs_addr_size;
+    char *namesp, *topic, *subs_addr, *raw_buf;
+    int namespace_len, topic_len, subs_addr_size;
 
     raw_buf = (char*)in.evnt.raw_data;
 
     namespace_len = ((int *)raw_buf)[0];
-    filter_len = ((int *)raw_buf)[1];
+    topic_len = ((int *)raw_buf)[1];
     subs_addr_size = ((int *)raw_buf)[2];
 
     namesp = malloc(namespace_len);
-    filter = malloc(filter_len);
+    topic = malloc(topic_len);
     subs_addr = malloc(subs_addr_size);
 
     
     memcpy(namesp, &raw_buf[sizeof(int)*3], namespace_len);
-    memcpy(filter, &raw_buf[sizeof(int)*3+namespace_len], filter_len);
-    memcpy(subs_addr, &raw_buf[sizeof(int)*3+namespace_len+filter_len], subs_addr_size);
-    map_subscribe(server->t, namesp, filter, subs_addr);
+    memcpy(topic, &raw_buf[sizeof(int)*3+namespace_len], topic_len);
+    memcpy(subs_addr, &raw_buf[sizeof(int)*3+namespace_len+topic_len], subs_addr_size);
+    map_subscribe(server->t, namesp, topic, subs_addr);
 
     out.ret = MESSAGING_SUCCESS;
     ret = margo_respond(hndl, &out);
     assert(ret == HG_SUCCESS);
 
     free(namesp);
-    free(filter);
+    free(topic);
     margo_free_input(hndl, &in);
     margo_destroy(hndl);
  
@@ -382,31 +382,31 @@ static void unsubscribe_rpc(hg_handle_t hndl)
     ret = margo_get_input(hndl, &in);
     assert(ret == HG_SUCCESS);
 
-    char *namesp, *filter, *subs_addr, *raw_buf;
-    int namespace_len, filter_len, subs_addr_size;
+    char *namesp, *topic, *subs_addr, *raw_buf;
+    int namespace_len, topic_len, subs_addr_size;
 
     raw_buf = (char*)in.evnt.raw_data;
 
     namespace_len = ((int *)raw_buf)[0];
-    filter_len = ((int *)raw_buf)[1];
+    topic_len = ((int *)raw_buf)[1];
     subs_addr_size = ((int *)raw_buf)[2];
 
     namesp = malloc(namespace_len);
-    filter = malloc(filter_len);
+    topic = malloc(topic_len);
     subs_addr = malloc(subs_addr_size);
 
     
     memcpy(namesp, &raw_buf[sizeof(int)*3], namespace_len);
-    memcpy(filter, &raw_buf[sizeof(int)*3+namespace_len], filter_len);
-    memcpy(subs_addr, &raw_buf[sizeof(int)*3+namespace_len+filter_len], subs_addr_size);
-    map_unsubscribe(server->t, namesp, filter, subs_addr);
+    memcpy(topic, &raw_buf[sizeof(int)*3+namespace_len], topic_len);
+    memcpy(subs_addr, &raw_buf[sizeof(int)*3+namespace_len+topic_len], subs_addr_size);
+    map_unsubscribe(server->t, namesp, topic, subs_addr);
 
     out.ret = MESSAGING_SUCCESS;
     ret = margo_respond(hndl, &out);
     assert(ret == HG_SUCCESS);
 
     free(namesp);
-    free(filter);
+    free(topic);
     free(subs_addr);
     margo_free_input(hndl, &in);
     margo_destroy(hndl);

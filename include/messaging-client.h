@@ -81,11 +81,11 @@ int client_finalize(messaging_client_t client);
 
 
 /**
- * @brief Publishes 'messg' of length 'msg_len' to a 'filter' Filter in 'namesp' Namespace
+ * @brief Publishes 'messg' of length 'msg_len' to a 'topic' topic in 'namesp' Namespace
  *
  * @param[in] client MESSAGING client that is publishing the message
  * @param[in] namesp Publishes message for namesp
- * @param[in] filter Publishes message to filter Filter
+ * @param[in] topic Publishes message to topic topic
  * @param[in] messg Publishes messg message
  * @param[in] msg_len Length of the msg to be published
  *
@@ -93,21 +93,21 @@ int client_finalize(messaging_client_t client);
  */
 int publish(messaging_client_t client, 
         char *namesp, 
-        char *filter, 
+        char *topic, 
         void *messg, 
         int msg_len);
 
 
 /**
- * @brief Subscribes to a 'filter' Filter in 'namesp' Namespace.
+ * @brief Subscribes to a 'topic' topic in 'namesp' Namespace.
  * 
  * When client receives notification 'callback' handler will be triggered
  * with arguments (void* callback_args, void* msg), where msg is the
  * published message
  *
- * @param[in] client MESSAGING client that is subscribing to a namespace and filter
+ * @param[in] client MESSAGING client that is subscribing to a namespace and topic
  * @param[in] namesp Subscribes to Namespace: 'namesp'
- * @param[in] filter Subscribes to Filter: 'filter'
+ * @param[in] topic Subscribes to topic: 'topic'
  * @param[in] callback pointer to the handler
  * @param[in] callback_args arguments to callback
  *
@@ -116,23 +116,23 @@ int publish(messaging_client_t client,
 
 int subscribe(messaging_client_t client, 
         char *namesp, 
-        char *filter,
+        char *topic,
         void (*callback)(void*, void*),
         void *callback_args);
 
 /**
- * @brief Unsubscribes from a 'filter' Filter in 'namesp' Namespace.
+ * @brief Unsubscribes from a 'topic' topic in 'namesp' Namespace.
  *
- * @param[in] client MESSAGING client that is subscribing to a namespace and filter
+ * @param[in] client MESSAGING client that is subscribing to a namespace and topic
  * @param[in] namesp Namespace: 'namesp'
- * @param[in] filter Filter: 'filter'
+ * @param[in] topic topic: 'topic'
  *
  * @return MESSAGING_SUCCESS or error code defined in messaging-common.h
  */
 
 int unsubscribe(messaging_client_t client, 
         char *namesp, 
-        char *filter);
+        char *topic);
 
 #if defined(__cplusplus)
 }
