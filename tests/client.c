@@ -65,7 +65,7 @@ int main(int argc, char **argv){
     int color = 1;
     MPI_Comm_split(MPI_COMM_WORLD, color, rank, &gcomm);
 
-    mid = margo_init(listen_addr_str, MARGO_SERVER_MODE, 1, -1);
+    mid = margo_init(listen_addr_str, MARGO_SERVER_MODE, 1, 2);
     assert(mid);
     //Use client_init() if clients do not use gcomm
     //int ret = client_init(mid, &c);

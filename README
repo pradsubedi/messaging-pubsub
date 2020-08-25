@@ -24,7 +24,7 @@ If you do not have margo installed
   $ spack install mochi-margo
 
 Load the margo-library
-  $ spack load -r margo
+  $ spack load -r mochi-margo
 
 Build:
   $ cd messaging-pubsub-master

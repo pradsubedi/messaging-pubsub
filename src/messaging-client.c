@@ -316,6 +316,8 @@ int client_init_with_mpi(margo_instance_id mid, MPI_Comm comm, messaging_client_
     margo_addr_to_string(client->mid, NULL, &my_addr_size, my_addr);
     my_addr_str = malloc(my_addr_size);
     margo_addr_to_string(client->mid, my_addr_str, &my_addr_size, my_addr);
+    margo_addr_free(client->mid, my_addr);
+
     client->addr_string = my_addr_str;
     client->addr_string_len = my_addr_size;
     client->t = map_new();
@@ -375,6 +377,7 @@ int client_init(margo_instance_id mid, messaging_client_t* cl)
     margo_addr_to_string(client->mid, NULL, &my_addr_size, my_addr);
     my_addr_str = malloc(my_addr_size);
     margo_addr_to_string(client->mid, my_addr_str, &my_addr_size, my_addr);
+    margo_addr_free(client->mid, my_addr);
     client->addr_string = my_addr_str;
     client->addr_string_len = my_addr_size;
     client->t = map_new();
@@ -442,8 +445,7 @@ int publish(messaging_client_t client, char *namesp, char* topic, void* messg, i
         fprintf(stderr, "Publish message got bad response. Publish failed\n");
     
     ret = resp.ret;
-
-    //free(raw_buf);
+    margo_addr_free(client->mid, svr_addr);
     margo_free_output(h, &resp);
     margo_destroy(h);
     return ret;
@@ -493,7 +495,7 @@ int subscribe(messaging_client_t client, char *namesp, char* topic, void (*handl
     
     ret = resp.ret;
     insert_handler(client->t, namesp, topic, handler_func, handler_args);
-
+    margo_addr_free(client->mid, svr_addr);
     margo_free_output(h, &resp);
     margo_destroy(h);
     return ret;
@@ -540,6 +542,7 @@ int unsubscribe(messaging_client_t client, char *namesp, char *topic){
     
     ret = resp.ret;
     delete_handler(client->t, namesp, topic);
+    margo_addr_free(client->mid, svr_addr);
     margo_free_output(h, &resp);
     margo_destroy(h);
     return ret;
@@ -570,6 +573,7 @@ static int remove_all_subscriptions(messaging_client_t client){
         margo_iforward(h, &in, &req);
         hndl[i] = h;
         serv_req[i] = req;
+        margo_addr_free(client->mid, svr_addr);
     }
     for (i = 0; i < client->num_servers; ++i){
         margo_wait(serv_req[i]);
@@ -646,6 +650,7 @@ static int remove_all_subscriptions_new(messaging_client_t client){
         margo_iforward(h, &in, &req);
         hndl[i] = h;
         serv_req[i] = req;
+        margo_addr_free(client->mid, svr_addr);
     }
     for (int i = 0; i < serv_size; ++i){
         margo_wait(serv_req[i]);

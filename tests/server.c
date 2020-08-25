@@ -52,7 +52,7 @@ int main(int argc, char **argv){
     int color = 1;
     MPI_Comm_split(MPI_COMM_WORLD, color, rank, &gcomm);
 
-    mid = margo_init(listen_addr_str, MARGO_SERVER_MODE, 1, -1);
+    mid = margo_init(listen_addr_str, MARGO_SERVER_MODE, 1, 4);
     assert(mid);
 
     int ret = server_init(mid, gcomm, &s);

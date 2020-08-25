@@ -38,10 +38,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include<assert.h>
+#include <assert.h>
 #include <messaging-server.h>
 #include <CppWrapper.h>
 #include <vector.h>
+#include <abt.h>
+
 
 struct messaging_server{
     margo_instance_id mid;
@@ -51,6 +53,7 @@ struct messaging_server{
     hg_id_t notify_id;
     hg_id_t finalize_id;
     WrapperMap *t;
+    ABT_rwlock lock;
 };
 
 DECLARE_MARGO_RPC_HANDLER(publish_rpc);
@@ -102,6 +105,7 @@ static int write_address(messaging_server_t server, MPI_Comm comm){
         goto errorfree;
     }
     fprintf(stdout,"Server running at %s\n", my_addr_str);
+    margo_addr_free(server->mid, my_addr);
 
     sizes = malloc(comm_size * sizeof(*sizes));
     self_addr_str_size = (int)strlen(my_addr_str) + 1;
@@ -211,6 +215,7 @@ int server_init(margo_instance_id mid, MPI_Comm comm, messaging_server_t* sv)
 
     }
     server->t=map_new();
+    ABT_rwlock_create(&server->lock);
     *sv = server;
 
     return MESSAGING_SUCCESS;
@@ -225,7 +230,10 @@ int server_destroy(messaging_server_t server){
     margo_deregister(mid, server->sub_id);
     margo_deregister(mid, server->unsub_id);
     /* deregister other RPC ids ... */
+    ABT_rwlock_wrlock(server->lock);
     map_delete(server->t);
+    ABT_rwlock_unlock(server->lock);
+    ABT_rwlock_free(&server->lock);
     server->t = NULL;
     free(server);
 }
@@ -262,7 +270,10 @@ static void publish_rpc(hg_handle_t hndl)
     memcpy(topic, &raw_buf[sizeof(int)*3+namespace_len], topic_len);
 
     vector sub_list;
+    ABT_rwlock_rdlock(server->lock);
     sub_list = map_get_value(server->t,  namesp, topic);
+    ABT_rwlock_unlock(server->lock);
+
     free(namesp);
     free(topic);
 
@@ -299,6 +310,7 @@ static void publish_rpc(hg_handle_t hndl)
         margo_iforward(h, &notify_in, &req); 
         notify_hndl[i] = h;
         serv_req[i] = req;
+        margo_addr_free(server->mid, cl_addr);
 
     }
     for (i = 0; i < total_subscribers; ++i){
@@ -353,7 +365,9 @@ static void subscribe_rpc(hg_handle_t hndl)
     memcpy(namesp, &raw_buf[sizeof(int)*3], namespace_len);
     memcpy(topic, &raw_buf[sizeof(int)*3+namespace_len], topic_len);
     memcpy(subs_addr, &raw_buf[sizeof(int)*3+namespace_len+topic_len], subs_addr_size);
+    ABT_rwlock_wrlock(server->lock);
     map_subscribe(server->t, namesp, topic, subs_addr);
+    ABT_rwlock_unlock(server->lock);
 
     out.ret = MESSAGING_SUCCESS;
     ret = margo_respond(hndl, &out);
@@ -399,7 +413,9 @@ static void unsubscribe_rpc(hg_handle_t hndl)
     memcpy(namesp, &raw_buf[sizeof(int)*3], namespace_len);
     memcpy(topic, &raw_buf[sizeof(int)*3+namespace_len], topic_len);
     memcpy(subs_addr, &raw_buf[sizeof(int)*3+namespace_len+topic_len], subs_addr_size);
+    ABT_rwlock_wrlock(server->lock);
     map_unsubscribe(server->t, namesp, topic, subs_addr);
+    ABT_rwlock_unlock(server->lock);
 
     out.ret = MESSAGING_SUCCESS;
     ret = margo_respond(hndl, &out);
@@ -430,8 +446,9 @@ static void client_finalize_rpc(hg_handle_t hndl)
 
     char *raw_buf;
     raw_buf = (char*)in.evnt.raw_data;
-
+    ABT_rwlock_wrlock(server->lock);
     map_remove(server->t, raw_buf);
+    ABT_rwlock_unlock(server->lock);
     out.ret = MESSAGING_SUCCESS;
     ret = margo_respond(hndl, &out);
     assert(ret == HG_SUCCESS);
