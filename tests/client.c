@@ -38,11 +38,14 @@
 #include <unistd.h>
 #include <messaging-client.h>
 #include <mpi.h>
+#include "timer.h"
+
+static struct timer timer_;
 
 void A(void* harg, void* received_msg) 
 { 
-    fprintf(stderr, "running callback function A\n"); 
-    fprintf(stderr, "Func A, Rank %d: Msg from publisher: %s\n", *(int*)harg, (char*)received_msg);
+    //fprintf(stderr, "running callback function A\n"); 
+    //fprintf(stderr, "Rank %d: Msg from publisher\n", *(int*)harg);
 } 
 
 void B(void* harg, void* received_msg) 
@@ -57,15 +60,22 @@ int main(int argc, char **argv){
 
     margo_instance_id mid     = MARGO_INSTANCE_NULL;
     messaging_client_t c = MESSAGING_CLIENT_NULL;
-    char *listen_addr_str = "sm";
+    char *listen_addr_str = "sockets";
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm gcomm = MPI_COMM_WORLD;
+    char msg[1024];
+    for (int i = 0; i < 1023; ++i)
+    {
+        msg[i] = 'a';
+    }
+    msg[1023] = '\0';
+    int num_steps = 100;
 
     int color = 1;
     MPI_Comm_split(MPI_COMM_WORLD, color, rank, &gcomm);
 
-    mid = margo_init(listen_addr_str, MARGO_SERVER_MODE, 1, 2);
+    mid = margo_init(listen_addr_str, MARGO_SERVER_MODE, 1, -1);
     assert(mid);
     //Use client_init() if clients do not use gcomm
     //int ret = client_init(mid, &c);
@@ -76,9 +86,13 @@ int main(int argc, char **argv){
     }
     void (*handler)(void*, void*);
     void *hargs;
-    hargs = &rank; 
+    hargs = malloc(sizeof(int));
+    memcpy(hargs, &rank, sizeof(int));
+    
     if(ret != 0) return ret;
 
+    double tm_st, tm_end;
+    /*
     if(rank==0){
         handler = A;
         sleep(3);
@@ -105,6 +119,35 @@ int main(int argc, char **argv){
         ret = publish(c, "first_namespace", "second_msg", (void*)message, strlen(message));
         sleep(10);
     }
+    */
+    timer_init(&timer_, 1);
+    timer_start(&timer_);
+    tm_st = timer_read(&timer_);
+    if(rank < 2){
+        handler = A;
+        ret = subscribe(c, "subs", "pub_msg", handler, hargs);
+        fprintf(stderr, "Subscribe complete for rank %d\n", rank);
+        //margo_wait_for_finalize(mid);
+        
+    }else{
+        sleep(1);
+        for (int i = 0; i < num_steps; ++i)
+        {
+            ret = publish(c, "subs", "pub_msg", (void*)msg, strlen(msg));
+        }
+        
+        
+    }
+    MPI_Barrier(gcomm);
+    tm_end = timer_read(&timer_);
+    double tm_diff = tm_end-tm_st;
+    double tm_max;
+    MPI_Reduce(&tm_diff, &tm_max, 1, MPI_DOUBLE, MPI_MAX, 0, gcomm);
+
+    if (rank == 0) {
+        fprintf(stdout, "MAX time %lf\n", tm_max);
+    }
+
     client_finalize(c);
     MPI_Finalize();
     return 0;

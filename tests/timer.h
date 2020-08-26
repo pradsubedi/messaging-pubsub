@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Rutgers Discovery Informatics Institute, Rutgers University
+ * Copyright (c) 2009, NSF Cloud and Autonomic Computing Center, Rutgers University
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided
@@ -25,47 +25,42 @@
  */
 
 /*
- *  Pradeep Subedi (2020)  RDI2 Rutgers University
- *  pradeep.subedi@rutgers.edu
- */
+*  Ciprian Docan (2009)  TASSL Rutgers University
+*  docan@cac.rutgers.edu
+*/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
-#include <margo.h>
-#include <messaging-server.h>
-#include <mpi.h>
-#include "timer.h"
+#ifndef __TIMER_H_
+#define __TIMER_H_
 
-static struct timer timer_;
+#ifdef XT3
+#  include <catamount/dclock.h>
+#else
+#  include <sys/time.h>
+#endif
 
-int main(int argc, char **argv){
+struct timer {
+#ifdef XT3
+        double starttime;
+        double stoptime;
+#else
+        struct timeval  start_time;
+        struct timeval  stop_time;
+#endif
+        double elapsed_time;
+        double alarm_time;
 
-    margo_instance_id mid     = MARGO_INSTANCE_NULL;
-    messaging_server_t s = MESSAGING_SERVER_NULL;
-    char *listen_addr_str = "sockets";
+        unsigned char stopped:1;
+        unsigned char started:1;
+        unsigned char reset:1;
+};
+typedef struct timer mtimer_t;
 
-    int rank;
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm gcomm = MPI_COMM_WORLD;
+void timer_init( mtimer_t*, unsigned int );
+void timer_start( mtimer_t* );
+void timer_stop( mtimer_t* );
+void timer_reset( mtimer_t* );
+double timer_read( mtimer_t* );
+int timer_expired( mtimer_t* );
+double timer_timestamp(void);
 
-    int color = 1;
-    MPI_Comm_split(MPI_COMM_WORLD, color, rank, &gcomm);
-
-    mid = margo_init(listen_addr_str, MARGO_SERVER_MODE, 1, 4);
-    assert(mid);
-
-    int ret = server_init(mid, gcomm, &s);
-    if(ret != 0) return ret;
-
-    // make margo wait for finalize
-    margo_wait_for_finalize(mid);
-    server_destroy(s);
-    
-    MPI_Finalize();
-    return 0;
-
-}
+#endif

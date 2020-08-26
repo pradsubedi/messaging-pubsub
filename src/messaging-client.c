@@ -413,8 +413,8 @@ int publish(messaging_client_t client, char *namesp, char* topic, void* messg, i
     int name_len, topic_len;
     int ret = 0;
 
-    name_len = strlen(namesp);
-    topic_len = strlen(topic);
+    name_len = strlen(namesp)+1;
+    topic_len = strlen(topic)+1;
 
     bulk_data_t raw_msg;
     raw_msg.evnt.size = sizeof(int)*3 + name_len + topic_len + msg_len;
@@ -460,8 +460,8 @@ int subscribe(messaging_client_t client, char *namesp, char* topic, void (*handl
 
     int name_len, topic_len;
 
-    name_len = strlen(namesp);
-    topic_len = strlen(topic);
+    name_len = strlen(namesp)+1;
+    topic_len = strlen(topic)+1;
 
     bulk_data_t raw_msg;
     raw_msg.evnt.size = sizeof(int)*3 + name_len + topic_len + client->addr_string_len;
@@ -538,7 +538,7 @@ int unsubscribe(messaging_client_t client, char *namesp, char *topic){
     margo_get_output(h, &resp);
 
     if(resp.ret != MESSAGING_SUCCESS)
-        fprintf(stderr, "subscribe message got bad response. subscribe failed\n");
+        fprintf(stderr, "Unubscribe message got bad response. Unsubscribe failed\n");
     
     ret = resp.ret;
     delete_handler(client->t, namesp, topic);
@@ -695,7 +695,6 @@ static void notify_rpc(hg_handle_t h)
     namespace_len = ((int *)raw_buf)[0];
     topic_len = ((int *)raw_buf)[1];
     tag_len = ((int *)raw_buf)[2];
-    //fprintf(stderr, "Namesp length: %d, topic length: %d, tag_len %d: in notification\n", namespace_len, topic_len, tag_len);
 
     namesp = (char *)malloc(namespace_len);
     topic = (char *)malloc(topic_len);
@@ -706,12 +705,10 @@ static void notify_rpc(hg_handle_t h)
 
     vector v;
     v = map_get_value(client->t, namesp, topic);
-
     void *handler_args;
     void (*handler_func)(void *, void *);
-    handler_func = VECTOR_GET(v, void*, 0);
     handler_args = VECTOR_GET(v, void*, 1);
-
+    handler_func = VECTOR_GET(v, void*, 0);
     (*handler_func)(handler_args, (void *)tag_msg);
 
     ret = margo_free_input(h, &in);

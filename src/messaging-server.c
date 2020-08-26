@@ -294,7 +294,7 @@ static void publish_rpc(hg_handle_t hndl)
     {
         char* client_addr;    
         client_addr = VECTOR_GET(sub_list, char*, i);
-        fprintf(stdout, "Sending notification to client %s\n", client_addr);
+        //fprintf(stdout, "Sending notification to client %s\n", client_addr);
 
         hg_addr_t cl_addr;
         margo_addr_lookup(server->mid, client_addr, &cl_addr);

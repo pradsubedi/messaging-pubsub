@@ -1,7 +1,7 @@
-add_executable(server server.c)
+add_executable(server server.c timer.c)
 target_link_libraries(server messaging)
 
-add_executable(client client.c)
+add_executable(client client.c timer.c)
 target_link_libraries(client messaging)
 
 
