@@ -679,7 +679,7 @@ static void notify_rpc(hg_handle_t h)
     hg_return_t ret;
 
     bulk_data_t in;
-    response_t resp;
+    response_t out;
 
     margo_instance_id mid = margo_hg_handle_get_instance(h);
     const struct hg_info* info = margo_get_info(h);
@@ -702,6 +702,10 @@ static void notify_rpc(hg_handle_t h)
     memcpy(namesp, &raw_buf[sizeof(int)*3], namespace_len);
     memcpy(topic, &raw_buf[sizeof(int)*3+namespace_len], topic_len);
     memcpy(tag_msg, &raw_buf[sizeof(int)*3+namespace_len+topic_len], tag_len);
+
+    out.ret = MESSAGING_SUCCESS;
+    margo_respond(h, &out);
+
 
     vector v;
     v = map_get_value(client->t, namesp, topic);

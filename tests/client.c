@@ -41,11 +41,23 @@
 #include "timer.h"
 
 static struct timer timer_;
+double tm_st, tm_end, tm_diff, tm_max;
+int counter, rank, num_steps, num_subscribers;
+messaging_client_t c;
+margo_instance_id mid;
+
 
 void A(void* harg, void* received_msg) 
 { 
     //fprintf(stderr, "running callback function A\n"); 
     //fprintf(stderr, "Rank %d: Msg from publisher\n", *(int*)harg);
+    counter++;
+    if(counter == num_steps){
+        if(rank < num_subscribers){
+            tm_end = timer_read(&timer_);
+            fprintf(stderr, "Rank %d: total workflow time %lf\n", rank, tm_end - tm_st);
+        }
+    }
 } 
 
 void B(void* harg, void* received_msg) 
@@ -55,11 +67,8 @@ void B(void* harg, void* received_msg)
 } 
 
 int main(int argc, char **argv){
-
-    int rank;
-
-    margo_instance_id mid     = MARGO_INSTANCE_NULL;
-    messaging_client_t c = MESSAGING_CLIENT_NULL;
+    fprintf(stderr, "Usage: mpirun -n np ./client num_steps num_subscribers\n");
+    counter = 0;
     char *listen_addr_str = "sockets";
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -70,7 +79,8 @@ int main(int argc, char **argv){
         msg[i] = 'a';
     }
     msg[1023] = '\0';
-    int num_steps = 100;
+    num_steps = atoi(argv[1]);
+    num_subscribers = atoi(argv[2]);
 
     int color = 1;
     MPI_Comm_split(MPI_COMM_WORLD, color, rank, &gcomm);
@@ -91,7 +101,6 @@ int main(int argc, char **argv){
     
     if(ret != 0) return ret;
 
-    double tm_st, tm_end;
     /*
     if(rank==0){
         handler = A;
@@ -121,33 +130,27 @@ int main(int argc, char **argv){
     }
     */
     timer_init(&timer_, 1);
-    timer_start(&timer_);
-    tm_st = timer_read(&timer_);
-    if(rank < 2){
+    timer_start(&timer_);   
+    if(rank < num_subscribers){
         handler = A;
+        tm_st = timer_read(&timer_);
         ret = subscribe(c, "subs", "pub_msg", handler, hargs);
         fprintf(stderr, "Subscribe complete for rank %d\n", rank);
         //margo_wait_for_finalize(mid);
         
     }else{
         sleep(1);
+        //tm_st = timer_read(&timer_);
         for (int i = 0; i < num_steps; ++i)
         {
             ret = publish(c, "subs", "pub_msg", (void*)msg, strlen(msg));
         }
+        //tm_end = timer_read(&timer_);
         
-        
-    }
-    MPI_Barrier(gcomm);
-    tm_end = timer_read(&timer_);
-    double tm_diff = tm_end-tm_st;
-    double tm_max;
-    MPI_Reduce(&tm_diff, &tm_max, 1, MPI_DOUBLE, MPI_MAX, 0, gcomm);
+    }  
 
-    if (rank == 0) {
-        fprintf(stdout, "MAX time %lf\n", tm_max);
-    }
-
+    
+    margo_wait_for_finalize(mid);
     client_finalize(c);
     MPI_Finalize();
     return 0;
