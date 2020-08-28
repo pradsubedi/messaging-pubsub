@@ -250,8 +250,6 @@ static int build_address(messaging_client_t* cl){
     } while (tok != NULL);
     if (addr_str_buf_len != rd_buf_size)
     {
-        // adjust buffer size if our initial guess was wrong
-        fprintf(stderr, "Read size and buffer_len are not equal\n");
         void *tmp = realloc(addr_str_buf, addr_str_buf_len);
         if (tmp == NULL) goto fini;
         addr_str_buf = tmp;

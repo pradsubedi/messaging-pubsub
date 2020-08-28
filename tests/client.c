@@ -42,18 +42,16 @@
 
 static struct timer timer_;
 double tm_st, tm_end, tm_diff, tm_max;
-int counter, rank, num_steps, num_subscribers;
+int counter, rank, num_steps, num_publishers;
 messaging_client_t c;
 margo_instance_id mid;
 
 
 void A(void* harg, void* received_msg) 
 { 
-    //fprintf(stderr, "running callback function A\n"); 
-    //fprintf(stderr, "Rank %d: Msg from publisher\n", *(int*)harg);
     counter++;
-    if(counter == num_steps){
-        if(rank < num_subscribers){
+    if(counter == (num_steps * num_publishers)){
+        if(rank >= num_publishers){
             tm_end = timer_read(&timer_);
             fprintf(stderr, "Rank %d: total workflow time %lf\n", rank, tm_end - tm_st);
         }
@@ -67,9 +65,13 @@ void B(void* harg, void* received_msg)
 } 
 
 int main(int argc, char **argv){
-    fprintf(stderr, "Usage: mpirun -n np ./client num_steps num_subscribers\n");
+
+    if(argc < 2){
+        fprintf(stderr, "Usage: mpirun -n num_processes ./client num_steps num_publishers\n");
+        return -1;
+    }
     counter = 0;
-    char *listen_addr_str = "sockets";
+    char *listen_addr_str = "verbs";
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm gcomm = MPI_COMM_WORLD;
@@ -80,7 +82,7 @@ int main(int argc, char **argv){
     }
     msg[1023] = '\0';
     num_steps = atoi(argv[1]);
-    num_subscribers = atoi(argv[2]);
+    num_publishers = atoi(argv[2]);
 
     int color = 1;
     MPI_Comm_split(MPI_COMM_WORLD, color, rank, &gcomm);
@@ -131,7 +133,7 @@ int main(int argc, char **argv){
     */
     timer_init(&timer_, 1);
     timer_start(&timer_);   
-    if(rank < num_subscribers){
+    if(rank >= num_publishers){
         handler = A;
         tm_st = timer_read(&timer_);
         ret = subscribe(c, "subs", "pub_msg", handler, hargs);

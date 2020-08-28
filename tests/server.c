@@ -45,7 +45,7 @@ int main(int argc, char **argv){
 
     margo_instance_id mid     = MARGO_INSTANCE_NULL;
     messaging_server_t s = MESSAGING_SERVER_NULL;
-    char *listen_addr_str = "sockets";
+    char *listen_addr_str = "verbs";
 
     int rank;
     MPI_Init(&argc, &argv);
