@@ -51,7 +51,7 @@ void A(void* harg, void* received_msg)
 { 
     counter++;
     if(counter == (num_steps * num_publishers)){
-        if(rank > num_publishers){
+        if(rank >= num_publishers){
             tm_end = timer_read(&timer_);
             fprintf(stderr, "Rank %d: total workflow time %lf\n", rank, tm_end - tm_st);
         }
