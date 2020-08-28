@@ -49,8 +49,6 @@ margo_instance_id mid;
 
 void A(void* harg, void* received_msg) 
 { 
-    //fprintf(stderr, "running callback function A\n"); 
-    //fprintf(stderr, "Rank %d: Msg from publisher\n", *(int*)harg);
     counter++;
     if(counter == num_steps){
         if(rank < num_subscribers){
@@ -67,9 +65,13 @@ void B(void* harg, void* received_msg)
 } 
 
 int main(int argc, char **argv){
-    fprintf(stderr, "Usage: mpirun -n np ./client num_steps num_subscribers\n");
+    
+    if(argc < 2){
+        fprintf(stderr, "Usage: mpirun -n num_processes ./client num_steps num_subscribers\n");
+        return -1;
+    }
     counter = 0;
-    char *listen_addr_str = "sockets";
+    char *listen_addr_str = "verbs";
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm gcomm = MPI_COMM_WORLD;
