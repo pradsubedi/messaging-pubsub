@@ -133,7 +133,7 @@ int main(int argc, char **argv){
     */
     timer_init(&timer_, 1);
     timer_start(&timer_);   
-    if(rank > num_publishers){
+    if(rank >= num_publishers){
         handler = A;
         tm_st = timer_read(&timer_);
         ret = subscribe(c, "subs", "pub_msg", handler, hargs);
